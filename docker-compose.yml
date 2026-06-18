@@ -30,6 +30,7 @@ services:
     environment:
       - ENVIRONMENT=development
       - DEBUG=true
+      - PYTHONPATH=filingpulse
       - SECRET_KEY=supersecretkey_mustbe_atleast_thirty_two_chars_long
       - ADMIN_API_KEY=admin_api_key_filingpulse_secure_token
       - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/filingpulse

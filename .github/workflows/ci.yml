@@ -60,5 +60,6 @@ jobs:
           ADMIN_API_KEY: test_admin_api_key
           ENVIRONMENT: development
           DEBUG: "true"
+          PYTHONPATH: filingpulse
         run: |
           python -m pytest tests/
