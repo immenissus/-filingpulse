@@ -1,0 +1,57 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgis/postgis:15-3.3-alpine
+    container_name: filingpulse_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: filingpulse
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d filingpulse"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: filingpulse_api
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - SECRET_KEY=supersecretkey_mustbe_atleast_thirty_two_chars_long
+      - ADMIN_API_KEY=admin_api_key_filingpulse_secure_token
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/filingpulse
+      - EMAIL_BACKEND=smtp
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+      - SMTP_FROM_ADDRESS=alerts@filingpulse.local
+      - SMTP_FROM_NAME=FilingPulse Alerts
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - .:/app
+
+  # Mailhog is a great developer utility for testing SMTP alerts locally without sending real emails
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: filingpulse_mailhog
+    ports:
+      - "1025:1025" # SMTP port
+      - "8025:8025" # Web UI port (view sent emails in browser at http://localhost:8025)
+    restart: always
+
+volumes:
+  postgres_data:
