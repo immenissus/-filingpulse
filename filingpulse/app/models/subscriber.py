@@ -11,7 +11,7 @@ from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from geoalchemy2 import Geometry
 
-from app.models.base import Base, TimestampMixin
+from .base import Base, TimestampMixin
 
 
 class Subscriber(Base, TimestampMixin):

@@ -19,16 +19,16 @@ from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import get_settings
-from app.database import get_session, get_session_factory
-from app.models.jurisdiction import Jurisdiction
-from app.models.filing import Filing
-from app.adapters.socrata_adapter import SocrataAdapter
-from app.schemas.raw_socrata import RawSocrataPermit
-from app.services.geocoder import CensusGeocoder
-from app.services.notifier import EmailNotifier
-from app.services.ingestion import ingest_raw_record
-from app.jobs.notification_worker import process_notification_queue
+from ..config import get_settings
+from ..database import get_session, get_session_factory
+from ..models.jurisdiction import Jurisdiction
+from ..models.filing import Filing
+from ..adapters.socrata_adapter import SocrataAdapter
+from ..schemas.raw_socrata import RawSocrataPermit
+from ..services.geocoder import CensusGeocoder
+from ..services.notifier import EmailNotifier
+from ..services.ingestion import ingest_raw_record
+from .notification_worker import process_notification_queue
 
 logger = logging.getLogger(__name__)
 settings = get_settings()

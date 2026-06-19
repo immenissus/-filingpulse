@@ -14,11 +14,11 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-# Ensure filingpulse directory is in sys.path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "filingpulse")))
+# Ensure workspace root is on sys.path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app.adapters.base import AdapterAuthError, AdapterRateLimitError, AdapterError
-from app.adapters.socrata_adapter import SocrataAdapter, SocrataAdapterConfig
+from filingpulse.app.adapters.base import AdapterAuthError, AdapterRateLimitError, AdapterError
+from filingpulse.app.adapters.socrata_adapter import SocrataAdapter, SocrataAdapterConfig
 
 
 def test_socrata_adapter_config_validation() -> None:
@@ -38,7 +38,7 @@ def test_socrata_adapter_config_validation() -> None:
     assert adapter.socrata_config.poll_interval_seconds == 86400  # Default
 
 
-@patch("app.adapters.socrata_adapter.Socrata")
+@patch("filingpulse.app.adapters.socrata_adapter.Socrata")
 def test_socrata_fetch_success(mock_socrata_class) -> None:
     """Ensure fetch_new_records calls Socrata.get with correct SoQL filters."""
     # Set up mock Socrata instance

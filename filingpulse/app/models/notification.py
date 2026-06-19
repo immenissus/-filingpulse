@@ -13,11 +13,11 @@ from typing import TYPE_CHECKING
 from sqlalchemy import BigInteger, DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base
+from .base import Base
 
 if TYPE_CHECKING:
-    from app.models.subscriber import Subscriber
-    from app.models.filing import Filing
+    from .subscriber import Subscriber
+    from .filing import Filing
 
 
 class Notification(Base):

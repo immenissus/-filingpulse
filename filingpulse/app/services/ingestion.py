@@ -17,16 +17,16 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.notification import Notification
-from app.models.jurisdiction import Jurisdiction
-from app.models.filing import Filing
-from app.models.quarantined_filing import QuarantinedFiling
-from app.models.alert_sent import AlertSent
-from app.schemas.raw_socrata import RawSocrataPermit, RawSocrataLicense
-from app.schemas.normalized import NormalizedFiling, FilingType
-from app.services.address_parser import parse_address
-from app.services.geocoder import CensusGeocoder, GeocoderError
-from app.services.matcher import find_matches_for_filing
+from ..models.notification import Notification
+from ..models.jurisdiction import Jurisdiction
+from ..models.filing import Filing
+from ..models.quarantined_filing import QuarantinedFiling
+from ..models.alert_sent import AlertSent
+from ..schemas.raw_socrata import RawSocrataPermit, RawSocrataLicense
+from ..schemas.normalized import NormalizedFiling, FilingType
+from .address_parser import parse_address
+from .geocoder import CensusGeocoder, GeocoderError
+from .matcher import find_matches_for_filing
 
 logger = logging.getLogger(__name__)
 

@@ -12,11 +12,11 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db, verify_admin_api_key
-from app.models.jurisdiction import Jurisdiction
-from app.models.filing import Filing
-from app.models.quarantined_filing import QuarantinedFiling
-from app.schemas.jurisdiction import JurisdictionCreate, JurisdictionOut, JurisdictionHealthOut
+from .deps import get_db, verify_admin_api_key
+from ..models.jurisdiction import Jurisdiction
+from ..models.filing import Filing
+from ..models.quarantined_filing import QuarantinedFiling
+from ..schemas.jurisdiction import JurisdictionCreate, JurisdictionOut, JurisdictionHealthOut
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/jurisdictions", tags=["jurisdictions"])

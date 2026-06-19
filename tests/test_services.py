@@ -15,15 +15,15 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 import responses
 
-# Ensure filingpulse directory is in sys.path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "filingpulse")))
+# Ensure workspace root is on sys.path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app.services.address_parser import parse_address
-from app.services.geocoder import CensusGeocoder, GeocoderNoMatchError, GeocoderServiceError
-from app.services.matcher import find_matches_for_filing
-from app.services.notifier import EmailNotifier, NotifierError
-from app.models.subscriber import Subscriber
-from app.models.filing import Filing
+from filingpulse.app.services.address_parser import parse_address
+from filingpulse.app.services.geocoder import CensusGeocoder, GeocoderNoMatchError, GeocoderServiceError
+from filingpulse.app.services.matcher import find_matches_for_filing
+from filingpulse.app.services.notifier import EmailNotifier, NotifierError
+from filingpulse.app.models.subscriber import Subscriber
+from filingpulse.app.models.filing import Filing
 
 
 # ---------------------------------------------------------------------------
@@ -199,7 +199,7 @@ async def test_matcher_executes_query() -> None:
 @patch("requests.post")
 async def test_notifier_resend_backend(mock_post) -> None:
     """Ensure EmailNotifier sends JSON payload to Resend API correctly."""
-    with patch("app.services.notifier.settings") as mock_settings:
+    with patch("filingpulse.app.services.notifier.settings") as mock_settings:
         mock_settings.email_backend = "resend"
         mock_settings.resend_api_key = "re_test_key_12345"
         mock_settings.resend_api_url = "https://api.resend.com/emails"

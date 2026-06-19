@@ -15,11 +15,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from shapely.geometry import shape
 from geoalchemy2.shape import to_shape
 
-from app.api.deps import get_db, verify_subscriber_api_key
-from app.models.subscriber import Subscriber
-from app.models.filing import Filing
-from app.models.alert_sent import AlertSent
-from app.schemas.subscriber import SubscriberCreate, SubscriberOut, RecentFilingOut
+from .deps import get_db, verify_subscriber_api_key
+from ..models.subscriber import Subscriber
+from ..models.filing import Filing
+from ..models.alert_sent import AlertSent
+from ..schemas.subscriber import SubscriberCreate, SubscriberOut, RecentFilingOut
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/subscribers", tags=["subscribers"])

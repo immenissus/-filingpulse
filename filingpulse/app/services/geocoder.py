@@ -15,9 +15,9 @@ from requests.adapters import HTTPAdapter
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.config import get_settings
-from app.schemas.geocode import CensusApiResponse, GeocodeResult
-from app.models.address_cache import AddressCache
+from ..config import get_settings
+from ..schemas.geocode import CensusApiResponse, GeocodeResult
+from ..models.address_cache import AddressCache
 
 logger = logging.getLogger(__name__)
 settings = get_settings()

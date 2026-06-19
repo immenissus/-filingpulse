@@ -15,7 +15,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db
+from .deps import get_db
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/filings", tags=["filings"])

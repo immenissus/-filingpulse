@@ -11,9 +11,9 @@ from fastapi import Header, HTTPException, status, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import get_settings
-from app.database import get_session
-from app.models.subscriber import Subscriber
+from ..config import get_settings
+from ..database import get_session
+from ..models.subscriber import Subscriber
 
 settings = get_settings()
 

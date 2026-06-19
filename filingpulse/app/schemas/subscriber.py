@@ -16,7 +16,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 
-from app.schemas.normalized import FilingType
+from .normalized import FilingType
 
 
 # ---------------------------------------------------------------------------

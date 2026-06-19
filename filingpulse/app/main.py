@@ -15,10 +15,10 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.config import get_settings
-from app.database import dispose_engine
-from app.jobs.scheduler import start_scheduler, shutdown_scheduler
-from app.api import subscribers, jurisdictions, filings
+from .config import get_settings
+from .database import dispose_engine
+from .jobs.scheduler import start_scheduler, shutdown_scheduler
+from .api import subscribers, jurisdictions, filings
 
 logger = logging.getLogger("app")
 settings = get_settings()

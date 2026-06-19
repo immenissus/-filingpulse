@@ -16,9 +16,9 @@ from email.mime.text import MIMEText
 
 import requests
 
-from app.config import get_settings
-from app.models.subscriber import Subscriber
-from app.models.filing import Filing
+from ..config import get_settings
+from ..models.subscriber import Subscriber
+from ..models.filing import Filing
 
 logger = logging.getLogger(__name__)
 settings = get_settings()

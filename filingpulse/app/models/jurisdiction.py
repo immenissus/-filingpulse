@@ -12,7 +12,7 @@ from sqlalchemy import BigInteger, Boolean, DateTime, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base, TimestampMixin
+from .base import Base, TimestampMixin
 
 
 class Jurisdiction(Base, TimestampMixin):

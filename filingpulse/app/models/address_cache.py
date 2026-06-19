@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from sqlalchemy import BigInteger, DateTime, Float, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.models.base import Base
+from .base import Base
 
 
 class AddressCache(Base):

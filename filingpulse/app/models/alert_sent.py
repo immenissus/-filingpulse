@@ -12,7 +12,7 @@ from datetime import datetime
 from sqlalchemy import BigInteger, DateTime, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.models.base import Base
+from .base import Base
 
 
 class AlertSent(Base):

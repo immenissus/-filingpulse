@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import usaddress
 
-from app.schemas.address import ParsedAddress
+from ..schemas.address import ParsedAddress
 
 logger = logging.getLogger(__name__)
 

@@ -12,9 +12,9 @@ import logging
 from sqlalchemy import select, or_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.subscriber import Subscriber
-from app.models.filing import Filing
-from app.models.alert_sent import AlertSent
+from ..models.subscriber import Subscriber
+from ..models.filing import Filing
+from ..models.alert_sent import AlertSent
 
 logger = logging.getLogger(__name__)
 

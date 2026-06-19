@@ -25,7 +25,7 @@ from sqlalchemy.ext.asyncio import (
 )
 from sqlalchemy.pool import NullPool
 
-from app.config import get_settings
+from .config import get_settings
 
 settings = get_settings()
 

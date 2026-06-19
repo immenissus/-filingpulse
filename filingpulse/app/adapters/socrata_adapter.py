@@ -14,7 +14,7 @@ from typing import Any
 import requests
 from sodapy import Socrata
 
-from app.adapters.base import (
+from .base import (
     AdapterConfig,
     AdapterError,
     AdapterAuthError,

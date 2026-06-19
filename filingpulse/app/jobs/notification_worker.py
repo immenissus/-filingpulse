@@ -12,9 +12,9 @@ from datetime import datetime, timezone
 from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 
-from app.database import get_session
-from app.models.notification import Notification
-from app.services.notifier import EmailNotifier
+from ..database import get_session
+from ..models.notification import Notification
+from ..services.notifier import EmailNotifier
 
 logger = logging.getLogger(__name__)
 

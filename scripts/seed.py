@@ -16,12 +16,12 @@ import sys
 
 from sqlalchemy import select
 
-# Ensure filingpulse directory is on sys.path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "filingpulse")))
+# Ensure workspace root is on sys.path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app.database import get_session, dispose_engine
-from app.models.jurisdiction import Jurisdiction
-from app.models.subscriber import Subscriber
+from filingpulse.app.database import get_session, dispose_engine
+from filingpulse.app.models.jurisdiction import Jurisdiction
+from filingpulse.app.models.subscriber import Subscriber
 
 
 async def seed_jurisdictions(session) -> None:

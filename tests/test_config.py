@@ -12,10 +12,10 @@ import sys
 import pytest
 from pydantic import ValidationError
 
-# Ensure filingpulse directory is in sys.path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "filingpulse")))
+# Ensure workspace root is on sys.path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from app.config import Settings
+from filingpulse.app.config import Settings
 
 
 def test_valid_development_config() -> None:

@@ -1,10 +1,10 @@
 """app/schemas/__init__.py"""
 
-from app.schemas.address import ParsedAddress
-from app.schemas.geocode import GeocodeResult, CensusApiResponse
-from app.schemas.normalized import FilingType, NormalizedFiling, QuarantinedFilingIn
-from app.schemas.raw_socrata import RawSocrataLicense, RawSocrataPermit
-from app.schemas.subscriber import (
+from .address import ParsedAddress
+from .geocode import GeocodeResult, CensusApiResponse
+from .normalized import FilingType, NormalizedFiling, QuarantinedFilingIn
+from .raw_socrata import RawSocrataLicense, RawSocrataPermit
+from .subscriber import (
     GeoJsonPolygon,
     GeoJsonMultiPolygon,
     GeoJsonPoint,
@@ -13,7 +13,7 @@ from app.schemas.subscriber import (
     SubscriberOut,
     RecentFilingOut,
 )
-from app.schemas.jurisdiction import (
+from .jurisdiction import (
     JurisdictionCreate,
     JurisdictionOut,
     JurisdictionHealthOut,

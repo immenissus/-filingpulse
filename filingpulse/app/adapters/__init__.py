@@ -1,6 +1,6 @@
 """app/adapters/__init__.py"""
 
-from app.adapters.base import (
+from .base import (
     AdapterConfig,
     AdapterError,
     AdapterAuthError,
