@@ -11,6 +11,8 @@ from app.models.subscriber import Subscriber
 from app.models.filing import Filing
 from app.models.quarantined_filing import QuarantinedFiling
 from app.models.alert_sent import AlertSent
+from app.models.address_cache import AddressCache
+from app.models.notification import Notification
 
 __all__ = [
     "Base",
@@ -20,4 +22,6 @@ __all__ = [
     "Filing",
     "QuarantinedFiling",
     "AlertSent",
+    "AddressCache",
+    "Notification",
 ]

@@ -28,12 +28,21 @@ from app.schemas.raw_socrata import RawSocrataPermit
 from app.services.geocoder import CensusGeocoder
 from app.services.notifier import EmailNotifier
 from app.services.ingestion import ingest_raw_record
+from app.jobs.notification_worker import process_notification_queue
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
 
 # Global scheduler instance
 _scheduler: AsyncIOScheduler | None = None
+
+
+async def run_notification_worker() -> None:
+    """Wrapper to run the notification worker."""
+    try:
+        await process_notification_queue()
+    except Exception as e:
+        logger.error("Notification worker failed: %s", str(e), exc_info=True)
 
 
 async def run_poll_job(jurisdiction_id: int) -> None:
@@ -204,6 +213,15 @@ def start_scheduler() -> None:
 
     logger.info("Starting background scheduler...")
     _scheduler = AsyncIOScheduler(timezone=settings.scheduler_timezone)
+    
+    # Schedule the notification worker to process the queue every minute
+    _scheduler.add_job(
+        run_notification_worker,
+        trigger=IntervalTrigger(seconds=60),
+        id="process_notification_queue",
+        replace_existing=True,
+    )
+    
     _scheduler.start()
 
     # Queue loading task to run immediately in the event loop

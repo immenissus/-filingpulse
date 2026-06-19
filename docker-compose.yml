@@ -5,16 +5,18 @@ services:
     image: postgis/postgis:15-3.3-alpine
     container_name: filingpulse_db
     restart: always
+    env_file:
+      - .env
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: filingpulse
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-filingpulse}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d filingpulse"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-filingpulse}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -27,18 +29,11 @@ services:
     restart: always
     ports:
       - "8000:8000"
+    env_file:
+      - .env
     environment:
-      - ENVIRONMENT=development
-      - DEBUG=true
+      # PYTHONPATH is not a secret, keep it here for clarity
       - PYTHONPATH=filingpulse
-      - SECRET_KEY=supersecretkey_mustbe_atleast_thirty_two_chars_long
-      - ADMIN_API_KEY=admin_api_key_filingpulse_secure_token
-      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/filingpulse
-      - EMAIL_BACKEND=smtp
-      - SMTP_HOST=mailhog
-      - SMTP_PORT=1025
-      - SMTP_FROM_ADDRESS=alerts@filingpulse.local
-      - SMTP_FROM_NAME=FilingPulse Alerts
     depends_on:
       db:
         condition: service_healthy

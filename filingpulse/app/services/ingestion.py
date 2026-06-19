@@ -13,9 +13,11 @@ import traceback
 from datetime import datetime
 from typing import Any
 
+from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.notification import Notification
 from app.models.jurisdiction import Jurisdiction
 from app.models.filing import Filing
 from app.models.quarantined_filing import QuarantinedFiling
@@ -25,7 +27,6 @@ from app.schemas.normalized import NormalizedFiling, FilingType
 from app.services.address_parser import parse_address
 from app.services.geocoder import CensusGeocoder, GeocoderError
 from app.services.matcher import find_matches_for_filing
-from app.services.notifier import EmailNotifier
 
 logger = logging.getLogger(__name__)
 
@@ -112,9 +113,10 @@ async def ingest_raw_record(
                 matched_address = f"{raw_address} (Source Coords)"
 
         if needs_geocoding:
+            geocoder = CensusGeocoder(db_session=session)
             # Reassemble cleaned one-line address if possible, otherwise use raw
             geocode_input = parsed_address.to_one_line() if parsed_address.is_geocodeable() else raw_address
-            geocode_res = geocoder.geocode(geocode_input)
+            geocode_res = await geocoder.geocode(geocode_input)
             latitude = geocode_res.latitude
             longitude = geocode_res.longitude
             matched_address = geocode_res.matched_address
@@ -192,30 +194,18 @@ async def ingest_raw_record(
         # Step 6 & 7: Match with subscribers and notify
         subscribers = await find_matches_for_filing(session, db_filing)
         for subscriber in subscribers:
-            try:
-                # Dispatch notification
-                await notifier.send_alert(subscriber, db_filing)
-
-                # Record successful notification to prevent double-alerting
-                alert = AlertSent(
-                    subscriber_id=subscriber.id,
-                    filing_id=db_filing.id,
-                )
-                session.add(alert)
-                logger.info(
-                    "Alert recorded for subscriber [id=%d] on filing [id=%d]",
-                    subscriber.id,
-                    db_filing.id,
-                )
-            except Exception as notify_err:
-                logger.error(
-                    "Failed to alert subscriber [id=%d] for filing [id=%d]: %s",
-                    subscriber.id,
-                    db_filing.id,
-                    str(notify_err),
-                    exc_info=True,
-                )
-                # Keep other alerts going; don't roll back the filing itself
+            # Enqueue notification instead of sending directly
+            notification = Notification(
+                subscriber_id=subscriber.id,
+                filing_id=db_filing.id,
+                status="pending"
+            )
+            session.add(notification)
+            logger.info(
+                "Notification queued for subscriber [id=%d] on filing [id=%d]",
+                subscriber.id,
+                db_filing.id,
+            )
 
         return db_filing
 

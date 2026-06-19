@@ -46,8 +46,14 @@ class Subscriber(Base, TimestampMixin):
     # ------------------------------------------------------------------
     # Relationships
     # ------------------------------------------------------------------
-    alerts: Mapped[list[AlertSent]] = relationship(  # noqa: F821
+    alerts_sent: Mapped[list["AlertSent"]] = relationship(  # noqa: F821
         "AlertSent",
+        back_populates="subscriber",
+        cascade="all, delete-orphan",
+        lazy="select",
+    )
+    notifications: Mapped[list["Notification"]] = relationship(  # noqa: F821
+        "Notification",
         back_populates="subscriber",
         cascade="all, delete-orphan",
         lazy="select",

@@ -2,8 +2,9 @@
 app/config.py
 =============
 Application configuration loaded from environment variables via Pydantic
-BaseSettings.  All secrets (DB URL, SMTP password, etc.) live in .env and
-are never hard-coded.
+BaseSettings.  All secrets (DB URL, SMTP password, API keys, etc.) live in .env
+and are never hard-coded.  See .env.example for the full list of required and
+optional variables.
 """
 
 from __future__ import annotations
@@ -11,7 +12,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, PostgresDsn, field_validator
+from pydantic import Field, PostgresDsn, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -30,7 +31,7 @@ class Settings(BaseSettings):
     environment: Literal["development", "staging", "production"] = "development"
     debug: bool = False
     secret_key: str = Field(..., min_length=32)
-    cors_origins: list[str] = Field(
+    cors_origins: str | list[str] = Field(
         default=["*"],
         description="Comma-separated allowed origins for CORS. Automatically parsed into a list."
     )
@@ -58,6 +59,22 @@ class Settings(BaseSettings):
     db_pool_size: int = 10
     db_max_overflow: int = 20
     db_pool_timeout: int = 30
+
+    # ------------------------------------------------------------------
+    # Third-party API keys
+    # ------------------------------------------------------------------
+    # Global default Socrata app token (per-jurisdiction tokens in jurisdiction
+    # config take precedence; this is a convenient fallback for all adapters).
+    socrata_app_token: str | None = Field(
+        default=None,
+        description="Socrata SODA app token — get one at https://data.socrata.com",
+    )
+
+    # NOAA Climate Data Online API token (https://www.ncdc.noaa.gov/cdo-web/token)
+    noaa_token: str | None = Field(
+        default=None,
+        description="NOAA Climate Data Online personal access token.",
+    )
 
     # ------------------------------------------------------------------
     # Geocoder (US Census Bureau — no key required)
@@ -121,6 +138,28 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return [o.strip() for p in v.split(",") for o in [p.strip()] if o]
         return v
+
+    @field_validator("cors_origins", mode="after")
+    @classmethod
+    def _warn_wildcard_cors(cls, v: list[str]) -> list[str]:
+        """Disallow wildcard CORS origin in production, raise ValueError."""
+        import os as _os
+        env = _os.environ.get("ENVIRONMENT", "development")
+        if "*" in v and env == "production":
+            raise ValueError(
+                "SECURITY ERROR: CORS_ORIGINS cannot contain '*' (wildcard) in a production environment. "
+                "Set CORS_ORIGINS to your actual, explicit frontend domain(s) in the production .env file."
+            )
+        return v
+
+    @model_validator(mode="after")
+    def _validate_resend_api_key(self) -> Settings:
+        """Ensure that resend_api_key is provided if email_backend is set to 'resend'."""
+        if self.email_backend == "resend" and not self.resend_api_key:
+            raise ValueError(
+                "resend_api_key is required when email_backend is set to 'resend'."
+            )
+        return self
 
 
 @lru_cache(maxsize=1)

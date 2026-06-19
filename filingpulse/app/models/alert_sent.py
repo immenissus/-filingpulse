@@ -39,10 +39,10 @@ class AlertSent(Base):
     # Relationships
     # ------------------------------------------------------------------
     subscriber: Mapped["Subscriber"] = relationship(
-        "Subscriber", back_populates="alerts", lazy="select"
+        "Subscriber", back_populates="alerts_sent", lazy="select"
     )
     filing: Mapped["Filing"] = relationship(
-        "Filing", back_populates="alerts", lazy="select"
+        "Filing", back_populates="alerts_sent", lazy="select"
     )
 
     def __repr__(self) -> str:

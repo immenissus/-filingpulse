@@ -81,7 +81,7 @@ class Filing(Base):
     jurisdiction: Mapped["Jurisdiction"] = relationship(  # noqa: F821
         "Jurisdiction", back_populates="filings", lazy="select"
     )
-    alerts: Mapped[list["AlertSent"]] = relationship(  # noqa: F821
+    alerts_sent: Mapped[list["AlertSent"]] = relationship(  # noqa: F821
         "AlertSent",
         back_populates="filing",
         cascade="all, delete-orphan",

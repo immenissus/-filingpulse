@@ -11,7 +11,7 @@ missing, callers should decide whether to quarantine the record.
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class ParsedAddress(BaseModel):
@@ -74,6 +74,12 @@ class ParsedAddress(BaseModel):
 
     # --- Raw one-line input (for debugging / quarantine messages) ---
     raw_input: str | None = Field(None, description="Original unparsed address string")
+
+    @model_validator(mode="after")
+    def _fallback_city_name(self) -> ParsedAddress:
+        if not self.city_name and self.place_name:
+            self.city_name = self.place_name
+        return self
 
     # ------------------------------------------------------------------
     # Convenience

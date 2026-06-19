@@ -50,7 +50,7 @@ def test_parse_address_valid() -> None:
 def test_parse_address_repeated_label_fallback() -> None:
     """Ensure extremely messy addresses with parsing loops fall back gracefully."""
     # This address would cause a repeated label or parse loop in usaddress
-    messy_addr = "123 Main St Main St 123"
+    messy_addr = "123 Main St Chicago IL 123 Main St Chicago IL"
     parsed = parse_address(messy_addr)
 
     # Parser should catch RepeatedLabelError and return an object with raw_input populated
@@ -63,8 +63,9 @@ def test_parse_address_repeated_label_fallback() -> None:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.asyncio
 @responses.activate
-def test_geocoder_success() -> None:
+async def test_geocoder_success() -> None:
     """Ensure successful geocoding responses are parsed into standard coordinates."""
     geocoder = CensusGeocoder()
     test_addr = "1600 Pennsylvania Ave NW, Washington, DC"
@@ -94,14 +95,15 @@ def test_geocoder_success() -> None:
         status=200,
     )
 
-    result = geocoder.geocode(test_addr)
+    result = await geocoder.geocode(test_addr)
     assert result.latitude == 38.8977
     assert result.longitude == -77.0365
     assert result.matched_address == "1600 PENNSYLVANIA AVE NW, WASHINGTON, DC, 20500"
 
 
+@pytest.mark.asyncio
 @responses.activate
-def test_geocoder_no_match() -> None:
+async def test_geocoder_no_match() -> None:
     """Ensure GeocoderNoMatchError is raised when the Census API finds nothing."""
     geocoder = CensusGeocoder()
     test_addr = "Invalid Address That Does Not Exist 99999"
@@ -120,11 +122,12 @@ def test_geocoder_no_match() -> None:
     )
 
     with pytest.raises(GeocoderNoMatchError):
-        geocoder.geocode(test_addr)
+        await geocoder.geocode(test_addr)
 
 
+@pytest.mark.asyncio
 @responses.activate
-def test_geocoder_out_of_bounds() -> None:
+async def test_geocoder_out_of_bounds() -> None:
     """Ensure coordinates outside continental US / standard bounds are rejected."""
     geocoder = CensusGeocoder()
     test_addr = "Some Fake Place"
@@ -149,7 +152,7 @@ def test_geocoder_out_of_bounds() -> None:
     )
 
     with pytest.raises(ValueError, match="outside expected US bounds"):
-        geocoder.geocode(test_addr)
+        await geocoder.geocode(test_addr)
 
 
 # ---------------------------------------------------------------------------
