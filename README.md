@@ -1,262 +1,261 @@
-# FilingPulse
+# RoofLead
 
-FilingPulse is a production-ready, high-performance FastAPI application designed to monitor local government open-data feeds (e.g., building permits, business licenses) and alert subscribed local-service businesses (roofers, HVAC, solar installers, lawyers, insurance agents) when new filings match their defined monitored service areas and filing-type filters.
-
----
-
-## Architecture Overview
-
-FilingPulse uses a robust, modular architectural pattern to ingest and process data feeds with near-zero infrastructure footprint:
-
-```
-+-----------------------------------------------------------+
-|                      FilingPulse API                      |
-|                                                           |
-|  POST /subscribers   GET /subscribers/{id}                |
-|  POST /jurisdictions GET /jurisdictions/{id}/health       |
-|  GET /filings (manual search via PostGIS ST_Distance)     |
-+-----------------------------------------------------------+
-                             |
-                             |  polls
-                             v
-+-----------------------------------------------------------+
-|               In-Process APScheduler Job                  |
-+-----------------------------------------------------------+
-                             |
-                             |  fetches SODA API
-                             v
-+-----------------------------------------------------------+
-|              Generic SocrataAdapter (sodapy)              |
-+-----------------------------------------------------------+
-                             |
-                             |  yields raw row
-                             v
-+-----------------------------------------------------------+
-|                     Ingestion Pipeline                     |
-|                                                           |
-| 1. Column Remapping & Pydantic Boundary Validation         |
-| 2. Address Component Parsing (usaddress wrapper)          |
-| 3. US Census Geocoding (coordinates resolution)           |
-| 4. Canonical Model Validation (NormalizedFiling)          |
-+-----------------------------------------------------------+
-                             |
-                             v
-              +-------------------------------+
-              |   Postgres + PostGIS Database  |
-              +-------------------------------+
-                             |
-                             |  triggers
-                             v
-+-----------------------------------------------------------+
-|                      Matching Engine                      |
-|                                                           |
-|  - GeoAlchemy2 Spatial Containment Query (ST_Contains)    |
-|  - Array Overlap Filtering for Filing Types               |
-|  - Deduplication tracking (alerts_sent table)             |
-+-----------------------------------------------------------+
-                             |
-                             |  dispatches
-                             v
-+-----------------------------------------------------------+
-|             Transactional Email Notifier                  |
-|                                                           |
-|  SMTP / TLS (Default with Mailhog support) OR Resend API   |
-+-----------------------------------------------------------+
-```
+Lead generation SaaS for roofing contractors. Users define territories, receive homeowner leads, and manage subscriptions.
 
 ---
 
-## Hard Constraints & Safety Rules
+## 1. Purpose
 
-1. **Anti-Hallucination on Dataset Identifiers:** No guessing or hardcoding Socrata resource IDs. Configurable values are supplied per jurisdiction via `/jurisdictions` admin registration.
-2. **Pydantic Validation Boundaries:** Raw record keys are mapped into strict boundary Pydantic v2 schemas (`RawSocrataPermit` / `RawSocrataLicense`). Any unparseable records are written to `quarantined_filings` with full traceback logs, ensuring system stability.
-3. **Watermark Polling:** Periodic polling relies on a per-jurisdiction watermark datetime instead of "last 24h" queries, allowing self-recovery after system downtime.
-4. **Local Geocoding Cache:** Local lookup table (`address_cache`) stores geocoding bounds of clean addresses, reducing external US Census API requests by 80-95% for duplicate rows.
-5. **Decoupled Notification Queue:** Rather than dispatching emails synchronously during ingestion, unmatched items are safely written to a database-backed `notifications` queue. An async polling worker asynchronously dispatches these tasks, isolating Resend/SMTP network issues and guaranteeing delivery.
-6. **Strict Ingestion Idempotency:** The database level composite constraint `uq_filings_jurisdiction_external` on (`jurisdiction_id`, `external_id`) guarantees that duplicated records are ignored gracefully without triggering redundant transactions or double-alerting.
+RoofLead is a high-performance lead-generation SaaS platform designed specifically for roofing contractors. It connects active service providers with high-intent homeowner leads inside strictly defined geographical territories.
 
----
-
-## Tech Stack
-
-- **Python 3.12**
-- **FastAPI** — high-performance REST framework.
-- **Pydantic v2** — strict boundary verification.
-- **PostgreSQL + PostGIS** — spatial proximity indexing.
-- **SQLAlchemy 2.0 (async)** + **Alembic** — database modeling and migrations.
-- **APScheduler** — in-process periodic polling (keeping operations footprint lightweight).
-- **geoalchemy2** & **shapely** — spatial geometry mapping and conversion.
-- **usaddress** — probabilistic US postal address parser.
-- **sodapy** — official Socrata SODA client wrapper.
+* **Frontend:** Next.js (Vercel)
+* **Backend:** Express.js (Railway)
+* **Database:** PostgreSQL (Supabase)
+* **Payments:** Stripe subscriptions with free trials
+* **Maps:** Google Maps API
 
 ---
 
-## API Endpoints
+## 2. Architecture
 
-### Subscribers
-- `POST /subscribers` — Registers a new subscriber, complete with business name, business type, filing filters, and monitored service area boundary (accepted as standard GeoJSON Polygon or MultiPolygon).
-- `GET /subscribers/{id}` — Returns detailed metadata about a subscriber, including their territory and up to 10 of their most recent matched filing alerts.
+```
+Frontend (Next.js)
+        |
+        v
+Backend API (Express.js) <---> Stripe Subscriptions & Webhooks
+        |               <---> Google Maps API
+        v
+Supabase PostgreSQL
+```
 
-### Jurisdictions
-- `POST /jurisdictions` — Registers a new jurisdiction with config metadata (domain, resource_id, app_token, column field map). Requires `X-Admin-Key` header authentication.
-- `GET /jurisdictions/{id}/health` — Returns comprehensive sync diagnostics (last polled, last success, consecutive failure counts, total ingested, and total quarantined).
+### Component Responsibilities
 
-### Filings
-- `GET /filings?near=lat,lng&radius_km=5.0&type=building_permit` — Manual search endpoint allowing users to locate filings within a radial distance from a given point, using `ST_DistanceSphere` proximity queries.
+* **Frontend (UI Only):** Resolves routes, presents interactive UI/UX, gathers user drawing coordinates, and handles user-facing dashboard interactions. Contains zero database queries or core business logic.
+* **Backend API:** Orchestrates authentication, processes Stripe checkout sessions and webhooks, executes territorial geo-matching algorithms, and guards access to data layers.
+* **Supabase Database (PostgreSQL):** Stores relational models for users, geographical circular territories, high-intent leads, and matched tables. Acts as the system source of truth.
+* **Stripe:** Manages subscription tiers, trials, recurring invoicing, and notifies the backend of state changes (e.g. renewals, cancellations) via webhooks.
+* **Google Maps API:** Handles client-side territory drawing, address autocomplete, and reverse-geocodes addresses to resolve coordinate pairs.
 
 ---
 
-## Frontend Integration & API Key Binding
+## 3. Folder Structure
 
-FilingPulse acts as a secure JSON REST API middleware between your database and the frontend dashboard (React, Next.js, Vue, etc.). The frontend never communicates directly with PostgreSQL; instead, it uses subscriber API keys to securely authorize requests.
-
-### 1. Where to Find API Keys for the Frontend
-
-#### During Local Development & Testing
-You can find pre-seeded development subscriber API keys in the database seed script (`scripts/seed.py`). 
-The standard test API keys loaded by default are:
-* **Austin Subscriber (ID: 1):** `austin_roofing_test_api_key_abc123`
-* **Dallas Subscriber (ID: 2):** `dallas_hvac_test_api_key_xyz789`
-
-#### In Production
-When a new customer signs up, your frontend makes a request to `POST /subscribers`. The response will contain an automatically generated, cryptographically secure API key prefixed with `sb_key_` (e.g., `sb_key_p1N6R7x...`). 
-Save this key securely on the client-side (e.g., local storage, cookies, or state manager) to authorize all subsequent requests.
-
-### 2. Binding the Key and Authenticating Frontend Requests
-
-To retrieve a subscriber's monitored territory, recent matched alerts, and profile details, the frontend must make an HTTP `GET` request and include the API key in the custom header: `X-Subscriber-Key`.
-
-#### Example Fetch Implementation (React/JavaScript)
-```javascript
-import React, { useEffect, useState } from 'react';
-
-function SubscriberDashboard({ subscriberId }) {
-  const [data, setData] = useState(null);
-  const [error, setError] = useState(null);
-
-  // In real applications, load this from LocalStorage or your Auth Provider
-  const SUBSCRIBER_API_KEY = "austin_roofing_test_api_key_abc123"; 
-
-  useEffect(() => {
-    fetch(`http://localhost:8000/subscribers/${subscriberId}`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Subscriber-Key": SUBSCRIBER_API_KEY // <-- Binding the API key here
-      }
-    })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`Authentication failed or subscriber not found. Status: ${response.status}`);
-      }
-      return response.json();
-    })
-    .then(data => setData(data))
-    .catch(err => setError(err.message));
-  }, [subscriberId]);
-
-  if (error) return <div className="error">Error: {error}</div>;
-  if (!data) return <div className="loading">Loading dashboard...</div>;
-
-  return (
-    <div className="dashboard">
-      <h1>Welcome, {data.business_name}!</h1>
-      <p>Industry Segment: {data.business_type}</p>
-      
-      <h2>Recent Service Area Alerts</h2>
-      <ul>
-        {data.recent_alerts.map((alert, index) => (
-          <li key={index}>
-            <strong>{alert.filing_type}</strong> - {alert.address_raw} ({alert.filed_at})
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
-export default SubscriberDashboard;
 ```
+RoofLead/
+├── app/                  # Next.js App Router (pages & layouts)
+├── components/           # Reusable client-side UI components
+├── lib/                  # Client-side API fetch client wrappers and general utilities
+├── hooks/                # Custom React state hooks (auth, territory fetching)
+├── pages/                # Legacy Next.js pages router views (if applicable)
+├── backend/
+│   ├── routes/           # REST endpoint route registrations
+│   ├── controllers/      # Route controllers mapping HTTP requests to services
+│   ├── services/         # Decoupled core business logic (Stripe, matching engine)
+│   └── middleware/       # JWT auth verification, logging, and error handlers
+└── database/
+    └── sql/              # Versioned raw DDL and database initialization schemas
+```
+
+### Folder Explanations
+
+* **`components/`**
+  Reusable visual UI components (e.g., standard mapping dashboards, tables, inputs, alert alerts).
+* **`lib/`**
+  Handles generic API call functions and helper configurations (e.g. supabase client initialization).
+* **`routes/`**
+  Defines endpoints mapped to HTTP verbs, binding middleware and controllers together.
+* **`services/`**
+  Contains stateless core business logic (e.g. territory validation, stripe payment logic) away from the routing layers.
 
 ---
 
-## Local Development & Setup
+## 4. Database Schema
 
-### 1. Configure Environmental Variables
-Create a `.env` file in the project root:
-```env
-ENVIRONMENT=development
-DEBUG=true
-SECRET_KEY=yoursecretkeyofatleastthirtytwocharacterslong
-ADMIN_API_KEY=admin_api_key_filingpulse_secure_token
+The database relies on a relational Postgres schema. Essential core models:
 
-# Local Postgres with PostGIS URL
-DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/filingpulse
+### `users`
+* `id` (UUID, Primary Key)
+* `email` (VARCHAR, Unique)
+* `stripe_customer_id` (VARCHAR, Nullable, Index)
+* `subscription_status` (VARCHAR, Default: 'inactive')
+* `created_at` (TIMESTAMPTZ)
 
-# Email Configurations
-EMAIL_BACKEND=smtp
-SMTP_HOST=localhost
-SMTP_PORT=1025
-SMTP_FROM_ADDRESS=alerts@filingpulse.local
-SMTP_FROM_NAME=FilingPulse Alerts
+### `territories`
+* `id` (BIGINT, Primary Key)
+* `user_id` (UUID, ForeignKey -> users.id, Cascade)
+* `latitude` (NUMERIC)
+* `longitude` (NUMERIC)
+* `radius_km` (NUMERIC, Default: 50)
+* `created_at` (TIMESTAMPTZ)
+
+### `leads`
+* `id` (BIGINT, Primary Key)
+* `address` (TEXT)
+* `latitude` (NUMERIC)
+* `longitude` (NUMERIC)
+* `status` (VARCHAR, Default: 'new')
+* `created_at` (TIMESTAMPTZ)
+
+---
+
+## 5. API Endpoints
+
+### Auth Endpoints
+
+#### `POST /auth/signup`
+* **Purpose:** Registers a new user account inside Supabase Auth.
+* **Input:** `{"email": "user@example.com", "password": "securepassword"}`
+* **Output:** `{"user_id": "uuid", "email": "user@example.com", "token": "jwt-token"}`
+
+#### `POST /auth/login`
+* **Purpose:** Authenticates user credentials and returns a session JWT.
+* **Input:** `{"email": "user@example.com", "password": "securepassword"}`
+* **Output:** `{"user_id": "uuid", "token": "jwt-token"}`
+
+### Stripe Billing Endpoints
+
+#### `POST /checkout/create-session`
+* **Purpose:** Creates a Stripe Checkout Session to initiate a subscription free-trial.
+* **Input (Headers: Authorization Bearer):** `{"price_id": "price_12345"}`
+* **Output:** `{"checkout_url": "https://checkout.stripe.com/..."}`
+
+#### `POST /stripe/webhook`
+* **Purpose:** Process Stripe webhook updates (e.g., cancellations, trial periods expiring).
+* **Input:** Stripe Event raw binary payload (requires signature verification header).
+* **Output:** `{"received": true}`
+
+### Territories Endpoints
+
+#### `GET /territories`
+* **Purpose:** Returns a list of circular territories registered by the authenticated user.
+* **Input:** JWT Token in headers.
+* **Output:** `[{"id": 1, "latitude": 30.267, "longitude": -97.743, "radius_km": 50.0}]`
+
+#### `POST /territories`
+* **Purpose:** Registers a new circular territory for the contractor.
+* **Input:** `{"latitude": 30.267, "longitude": -97.743, "radius_km": 50.0}`
+* **Output:** `{"id": 1, "latitude": 30.267, "longitude": -97.743, "radius_km": 50.0, "status": "created"}`
+
+### Leads Endpoints
+
+#### `GET /leads`
+* **Purpose:** Retrieves a collection of matched homeowner leads inside the contractor's territories.
+* **Input:** JWT Token in headers.
+* **Output:** `[{"id": 42, "address": "123 Main St, Austin, TX", "status": "new", "created_at": "..."}]`
+
+---
+
+## 6. Main User Flows
+
+### Sign Up & Onboarding Flow
+```
+User registers
+     ↓
+Account created in Supabase Auth
+     ↓
+Redirected to Stripe Checkout (Free Trial setup)
+     ↓
+Webhook captures checkout.session.completed
+     ↓
+`subscription_status` set to 'active'
+     ↓
+Contractor defines territories (lat, lng, radius)
+     ↓
+System matches leads within bounds and pushes alerts
 ```
 
-### 2. Run with Docker Compose
-Start the PostGIS database, the FastAPI server, and a Mailhog developer SMTP inbox:
-```bash
-docker-compose up --build
+### Lead Matching Flow
 ```
-- Interactive OpenAPI Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
-- Mailhog SMTP Web Inbox (view alerts locally): [http://localhost:8025](http://localhost:8025)
-
-### 3. Database Migrations
-Initialize database tables with Alembic:
-```bash
-# Inside the api container, or locally with virtualenv active:
-alembic upgrade head
-```
-
-### 4. Running Tests
-Run the test suite:
-```bash
-pytest tests/
+New lead enters system
+     ↓
+Extract latitude & longitude coordinates
+     ↓
+Perform Great-Circle distance query on `territories`
+     ↓
+Locate active users with overlapping circular boundaries
+     ↓
+Insert lead matches & trigger immediate email/web push
 ```
 
 ---
 
-## Scaling: Swapping to Celery & Redis
+## 7. Environment Variables
 
-The current FilingPulse scheduler runs as an in-process thread using `APScheduler`. This setup maintains a near-zero infrastructure cost, which is ideal for MVPs and small-scale deployment.
+Configure these keys inside your root `.env` (or cloud service variable dashboard):
 
-As ingestion volume and active jurisdictions scale, you can easily decouple periodic syncs from the web server using **Celery** and **Redis**:
+* **`SUPABASE_URL`**
+  The endpoint URL for your hosted Supabase project. Required by both Vercel and Railway.
+* **`SUPABASE_KEY`**
+  The public/secret API key used to read/write columns inside PostgreSQL.
+* **`STRIPE_SECRET_KEY`**
+  The cryptographically secure server-side API token used to create Checkout Sessions. **Never expose this to the frontend.**
+* **`STRIPE_WEBHOOK_SECRET`**
+  The signing secret generated by Stripe CLI or Stripe Dashboard used to verify webhook payload integrity.
+* **`GOOGLE_MAPS_API_KEY`**
+  Client-side API key utilized by the Next.js frontend to render interactive Map dashboards and capture address selections.
+* **`FRONTEND_URL`**
+  Domain of the Next.js app (e.g., Vercel) used to handle OAuth redirects and Stripe success/cancel callbacks.
+* **`BACKEND_URL`**
+  Domain of the Express API running on Railway.
 
-1. **Install Celery & Redis:**
-   Add `celery==5.4.0` and `redis==5.0.4` to your `requirements.txt`.
-2. **Setup Celery Application:**
-   Create a `celery_app.py` worker configuration:
-   ```python
-   from celery import Celery
+---
 
-   celery = Celery(
-       "filingpulse",
-       broker="redis://redis:6379/0",
-       backend="redis://redis:6379/0",
-   )
-   ```
-3. **Decouple the Lifespan Hooks:**
-   Remove `start_scheduler()` and `shutdown_scheduler()` from `app/main.py`.
-4. **Port the Scheduler Job to Celery Tasks:**
-   In `app/jobs/scheduler.py`, wrap `run_poll_job` in a Celery task decorator:
-   ```python
-   @celery.task
-   def run_poll_job_celery(jurisdiction_id: int):
-       # Execute the exact same routine inside the background worker
-       asyncio.run(run_poll_job(jurisdiction_id))
-   ```
-5. **Configure periodic polling schedule:**
-   Setup `celery-beat` scheduler to trigger `run_poll_job_celery` for registered active jurisdictions at specific intervals.
-6. **Update `docker-compose.yml`:**
-   Add a Redis service container and split your container stack into:
-   - `api`: running uvicorn
-   - `celery_worker`: running `celery -A celery_app.celery worker`
-   - `celery_beat`: running `celery -A celery_app.celery beat`
+## 8. Business Rules
+
+* **Single Territory Definition:** A single territory is defined by exactly one coordinate center (`latitude`, `longitude`) and a radial distance (`radius_km`).
+* **Default Radial Reach:** If a contractor does not specify a boundary size, the system defaults the radial reach to **50 kilometers**.
+* **Overlap Exclusivity:** To prevent saturated bidding, users **cannot create overlapping territories** that cross other territories they own.
+* **Active Paywall Gate:** Subscription status is verified at every API boundary. Active territories require a subscription status of `active` or `trialing`.
+* **Lead Target Locking:** Leads are exclusively dispatched to contractors with active subscription statuses. If a match occurs but a subscription is delinquent, the lead is held.
+
+---
+
+## 9. Current Tech Stack
+
+* **Frontend:** Next.js (React), TypeScript, Tailwind CSS, Google Maps SDK.
+* **Backend:** Express.js, Node.js.
+* **Database:** Supabase PostgreSQL (utilizing standard geometric extensions).
+* **Hosting:** Vercel (Frontend), Railway (Backend API).
+* **Payments:** Stripe Subscriptions (Billing portal & automated subscription states).
+
+---
+
+## 10. Known Issues / TODO
+
+* **Notifications Missing:** Immediate SMS/email notification dispatches are currently mock placeholders.
+* **Overlap Verification Gap:** Territory overlap checks are currently enforced on client-side math but need rigid server-side execution.
+* **Webhook Retry Logic:** Stripe webhook route lacks backoff handling for temporary database lockouts.
+
+---
+
+## 11. Development Principles
+
+* **Backend Encapsulation:** Core business logic, Stripe pricing rules, and geofence computation belong strictly in backend services.
+* **Client Isolation:** The frontend must never handle Stripe secret keys or directly read/write raw database lines.
+* **Reusability:** Visual elements (drawers, maps, lists) should be isolated inside modular React components.
+* **Serialization Integrity:** All backend API JSON responses must strictly serialize properties as `camelCase`.
+
+---
+
+## 12. Important Files
+
+* **`backend/routes/stripe.ts`**
+  Initializes checkout sessions, verifies Stripe signatures, and handles webhook callback updates.
+* **`services/territoryService.ts`**
+  Handles territory CRUD operations and executes matching algorithms using SQL great-circle distance formulas.
+* **`lib/supabase.ts`**
+  Initializes Supabase connection clients and coordinates backend authentications.
+
+---
+
+## AI Context
+
+This is a lead-generation SaaS for roofing contractors.
+
+* **Frontend contains no business logic.** The Next.js UI is entirely stateless; all calculations happen on the server.
+* **Stripe secrets live only in the backend.** Client-side checkout relies solely on Redirect Session URLs returned from Express.
+* **Territory radius is stored in kilometers.**
+* **PostgreSQL is the source of truth.** No local cached or session records override database states.
+* **Subscription status determines access.**
+* **Never duplicate logic already in `services/`.** Always import and delegate routines to existing service modules.
+* **Prefer modifying existing files over creating new ones.** Keep the directory footprint tight and leverage existing structures.
